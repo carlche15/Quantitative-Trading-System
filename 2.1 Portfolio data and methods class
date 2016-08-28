@@ -1,0 +1,125 @@
+class Portfolio:
+    def __init__(self,connection,tickers,start,end,initial_capital=1000000,weights=[]):
+        self.portfolio=pd.DataFrame()
+        self.tickers=tickers
+        self.initial_stock_price=[]
+        self.capital=initial_capital
+        self.historical=[]
+        self.historical_annual_returns=[]
+        if(len(weights)==0):
+         self.weights=np.ones(len(self.tickers))/len(self.tickers)
+        else:
+          temp=np.asarray(weights).sum()
+          print temp
+          print weights
+          self.weights=weights/temp
+          print self.weights
+        # self.weights=[1,1,1]
+        # self.portfolio_value
+        for i in range(len(self.tickers)):
+
+
+            stock_temp=Stock_Info(connection,self.tickers[i],start,end)
+            self.historical.append(stock_temp.oney_return) # order matters
+            self.historical_annual_returns.append(stock_temp.annual_avg_return)
+            initial_price_temp=stock_temp.selected_line_info.values[0]
+            stock_capital_temp=self.capital*self.weights[i]
+            stock_share_temp=round(stock_capital_temp/initial_price_temp)
+            df_temp=pd.DataFrame([[stock_share_temp,stock_temp.selected_line_info]],columns=["Shares","Price data"],index=[self.tickers[i]])
+            self.portfolio=pd.concat([self.portfolio,df_temp],axis=0)
+            print "Portfolio Constructing....("+str(i+1)+"/"+str(len(tickers))+")"
+        self.portfolio["Weighted data"]=pd.Series(self.portfolio["Shares"]*self.portfolio["Price data"],index=self.portfolio.index)
+        self.portfolio_value=self.portfolio["Weighted data"].sum()
+
+        print "Portfolio Construction completed! "
+        # print "Current Portfolio: ",self.tickers
+        #
+        # self.portfolio_sharp_ratio()
+    def portfolio_var(self):
+        weight_matrix_temp=(np.mat(self.weights).T)*np.mat(self.weights)
+        convariance_matrix=np.mat(np.cov(self.historical))
+        temp_result=convariance_matrix*weight_matrix_temp
+        temp_result=np.diagonal(temp_result)
+        print temp_result
+        print np.sort(temp_result)
+        self.totalvar=temp_result.sum()
+        self.annualized_total_std=np.sqrt(252*self.totalvar)
+        print "portfolio annualized standard deviation: ", self.annualized_total_std
+        return self.annualized_total_std
+
+    def variance_distribution(self):
+        weight_matrix_temp = (np.mat(self.weights).T) * np.mat(self.weights)
+        convariance_matrix = np.mat(np.cov(self.historical))
+       # CONSTRUCTING THE WEIGHTED CO-VARIANCE MATRIX
+
+        df = pd.DataFrame(0.0, index=np.arange(len(convariance_matrix)), columns=np.arange(len(convariance_matrix)))
+        for i in range(len(convariance_matrix)):
+            row_temp = np.array(convariance_matrix[i])
+            column_temp = np.array(weight_matrix_temp[:, i]).reshape(1, len(convariance_matrix))
+            temp_result = row_temp * column_temp
+            # print temp_result
+            for j in range(len(temp_result[0])):
+                df.iat[i, j] = temp_result[0][j]
+        print df
+
+        weighted_variance = np.mat(df)
+        weighted_variance_diag = np.diag(np.diag(weighted_variance))
+        weighted_variance = 2 * weighted_variance
+        size = weighted_variance - weighted_variance_diag
+        print size
+
+        # ABOVE IS STEP 2 see document "PROGRAMMING GUIDE"
+
+        main = np.arange(len(convariance_matrix))
+        df1 = pd.DataFrame(main, columns=["x"])
+
+        num = 0
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        df = pd.DataFrame()
+
+        for i in range(len(convariance_matrix)):
+            tem_str1 = "x" + str(i)
+            temp_xx = i * np.ones(len(convariance_matrix))
+            temp_x = pd.DataFrame(temp_xx, columns=[tem_str1])
+            tem_str2 = "y" + str(i)
+            temp_yy = np.arange(len(convariance_matrix))
+            temp_y = pd.DataFrame(temp_yy, columns=[tem_str2])
+            df = pd.concat([df, temp_x], axis=1)
+            df = pd.concat([df, temp_y], axis=1)
+            temp_zz = []
+            tem_str3 = "z" + str(i)
+            for j in np.arange(len(convariance_matrix)):
+                temp_zz.append(size[temp_xx[j], temp_yy[j]])
+
+            temp_z = pd.DataFrame(temp_zz, columns=[tem_str3])
+            df = pd.concat([df, temp_z], axis=1)
+            area = np.pi * (6000000 * df[tem_str3]) ** 2
+            color = np.random.rand(len(convariance_matrix))
+            # color=["red","green","blue","cyan","orange","grey","purple","darkgreen","gold","forestgreen","lightcyan","violet"]
+            plt.scatter(x=df[tem_str1], y=df[tem_str2], s=area,c=color,edgecolors=None, alpha=0.4)
+        plt.xticks(np.arange(len(self.tickers)),self.tickers)
+        plt.yticks(np.arange(len(self.tickers)),self.tickers)
+
+        plt.show()
+
+
+    def portfolio_sharp_ratio(self):
+        self.portfolio_expected_return=self.weights*np.asarray(self.historical_annual_returns)
+        self.portfolio_expected_return=self.portfolio_expected_return.sum()
+        print "portfolio annualized return: ",self.portfolio_expected_return
+        self.sharp_ratio=(self.portfolio_expected_return-0.017)/self.portfolio_var()
+        print "Sharp_Ratio: ",self.sharp_ratio
+
+
+
+    def portfolio_val(self):
+        description_str="Portfolio Value: "
+        print type(self.portfolio_value)
+        return description_str,self.portfolio_value
+
+
+    def portfolio_weights(self):
+        description_str="weights"
+        temp=pd.Series(self.weights,index=self.tickers)
+        return description_str,temp
