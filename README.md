@@ -3,7 +3,7 @@ This “Quantitative Analysis platform” will hopefully do three major things:
 2) Quantitative trading simulation  
 3) A machine-learning approach to profit/loss simulation of a hedge fund  
     Each part of the function is composed by various modules:  
-    0) 
+    0) Data/Date format modify tools.  
     1) Stock chart analysis:  
      1.1 Fetching & updating data from public Python API(Yahoo Finance).  
      1.2 Local database management(Sqlite3).  
