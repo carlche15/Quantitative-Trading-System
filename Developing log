@@ -2,4 +2,12 @@
 8-29:  
 *split the variance distribution function from the portfolio class and put it into the portfolio chart class  
 *make the bubble corlorful  
+** next step:  
+simple algo trading:  
+
+#1 signal information: stockdata obj->call->stock method, and get the intensity of the signal, saved in the stockdata obj  
+#2 set the weights:  portfolio->call->stockdata obj, get #1 and adjust weight  
+#* both #1 and #2 are conducted by a class called algo  
+
+
 
