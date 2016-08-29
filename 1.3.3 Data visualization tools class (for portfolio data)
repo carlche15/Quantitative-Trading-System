@@ -4,9 +4,9 @@ class Chart_Factory_Portfolio:
   def __init__(self):
       self.portfolio={}
       self.current_indicator=0
-      self.figure_map={"portfolio":False,"weights":False}
+      self.figure_map={"portfolio":False,"weights":False,"risk":False}
 
-  def push_data(self,method,isportfolio=False,isweight=False):
+  def push_data(self,method,isportfolio=False,isweight=False,isrisk=False):
 
       if(isportfolio):
           index,value=method
@@ -18,6 +18,38 @@ class Chart_Factory_Portfolio:
            index,value=method
            self.portfolio[index]=value
            self.figure_map["weights"]=True
+      if(isrisk):
+           self.indicator2+=1
+           index,value=method
+           self.portfolio[index]=value
+           self.figure_map["risk"]=True
+
+  def plot_portfolio_risk(self,ax):
+          ax=ax
+
+          df=self.portfolio["Portfolio's risk distribution: "]
+          print "result", df
+          for i in range(len(df)):
+              x_str_temp="x"+str(i)
+              y_str_temp="y"+str(i)
+              z_str_temp="z"+str(i)
+              # color=np.random.rand(len(df[x_str_temp]))
+              color=["red","green","blue","cyan","orange","grey","purple","darkgreen","gold","forestgreen","lightcyan","violet"]
+              area=np.pi * (60000000* df[z_str_temp].values) ** 2
+              plt.scatter(x=df[x_str_temp].values, y=df[y_str_temp].values, s=area, c=color, edgecolors=None, alpha=0.4)
+              print "current x"
+              print df[x_str_temp].values
+              print "current y"
+              print  df[y_str_temp].values
+
+          tickers=self.portfolio["weights"].index
+          print tickers
+          print tickers
+          plt.xticks(np.arange(len(tickers)), tickers)
+          plt.yticks(np.arange(len(tickers)), tickers)
+
+
+
 
   def plot_portfolio_val(self,ax):
           ax=ax
@@ -77,6 +109,10 @@ class Chart_Factory_Portfolio:
           ax = fig.add_subplot(gs[self.current_indicator])
           self.plot_weights(ax)
 
-
+      if (self.figure_map["risk"]):
+          ff=plt.figure()
+          self.current_indicator += 1
+          ax=plt.subplot()
+          self.plot_portfolio_risk(ax)
 
       plt.show()
