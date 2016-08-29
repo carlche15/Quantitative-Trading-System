@@ -34,7 +34,7 @@ class Portfolio:
         print "Portfolio Construction completed! "
         # print "Current Portfolio: ",self.tickers
         #
-        # self.portfolio_sharp_ratio()
+        self.portfolio_sharp_ratio()
     def portfolio_var(self):
         weight_matrix_temp=(np.mat(self.weights).T)*np.mat(self.weights)
         convariance_matrix=np.mat(np.cov(self.historical))
@@ -60,7 +60,7 @@ class Portfolio:
             # print temp_result
             for j in range(len(temp_result[0])):
                 df.iat[i, j] = temp_result[0][j]
-        print df
+
 
         weighted_variance = np.mat(df)
         weighted_variance_diag = np.diag(np.diag(weighted_variance))
@@ -70,12 +70,9 @@ class Portfolio:
 
         # ABOVE IS STEP 2 see document "PROGRAMMING GUIDE"
 
-        main = np.arange(len(convariance_matrix))
-        df1 = pd.DataFrame(main, columns=["x"])
 
-        num = 0
         fig = plt.figure()
-        ax = fig.add_subplot()
+
         df = pd.DataFrame()
 
         for i in range(len(convariance_matrix)):
@@ -94,14 +91,14 @@ class Portfolio:
 
             temp_z = pd.DataFrame(temp_zz, columns=[tem_str3])
             df = pd.concat([df, temp_z], axis=1)
-            area = np.pi * (6000000 * df[tem_str3]) ** 2
-            color = np.random.rand(len(convariance_matrix))
-            # color=["red","green","blue","cyan","orange","grey","purple","darkgreen","gold","forestgreen","lightcyan","violet"]
-            plt.scatter(x=df[tem_str1], y=df[tem_str2], s=area,c=color,edgecolors=None, alpha=0.4)
-        plt.xticks(np.arange(len(self.tickers)),self.tickers)
-        plt.yticks(np.arange(len(self.tickers)),self.tickers)
 
-        plt.show()
+            # color=["red","green","blue","cyan","orange","grey","purple","darkgreen","gold","forestgreen","lightcyan","violet"]
+
+        description_str = "Portfolio's risk distribution: "
+        return description_str,df
+
+
+
 
 
     def portfolio_sharp_ratio(self):
