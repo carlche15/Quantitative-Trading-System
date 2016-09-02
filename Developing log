@@ -5,6 +5,15 @@
 ** next step:  
 simple algo trading:  
 
+## create a class to operate upon the portfolio class:  
+#1 create operator class, which include a a data member called weights and function members that could  changed the value of the weights  
+actually each class would produce a temperal weights  
+I will also develop operators to connect different "weights", like(+-*/)....  
+
+
+
+
+
 #1 signal information: stockdata obj->call->stock method, and get the intensity of the signal, saved in the stockdata obj  
 #2 set the weights:  portfolio->call->stockdata obj, get #1 and adjust weight  
 #* both #1 and #2 are conducted by a class called algo  
