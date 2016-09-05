@@ -16,7 +16,7 @@ from itertools import permutations
 import time
 
 
-connection=sql.connect("stock_data - Copy.db")
+connection=sql.connect("stock_data_94.db")
 def database_ini():
  df=pd.DataFrame()
  print "Start constructing the stock database...."
@@ -25,7 +25,7 @@ def database_ini():
          "CMCSA","INTC","MRK","DIS","PEP","IBM","PM","CSCO","BAC","UNH",
          "MO","C","BMY","AMGN","MDT","GILD","SLB","MCD","MMM","ABBV","KHC",
          "CVS","MA","AGN","UPS","NKE","QCOM","HON","WBA"]
- start='1990-06-25'
+ start='2014-06-25'
  end='2016-08-10'
  for i in range(len(ticker)):
       temp1=Share(ticker[i]).get_historical(start,end)
@@ -34,9 +34,9 @@ def database_ini():
       print i+1, "/50 is completed!"
  print "Database construction is completed! "
 
- df=df[["Symbol","Date","Adj_Close","Open","Volume","High","Low"]]
+ df=df[["Symbol","Date","Close","Open","Volume","High","Low"]]
  df=df.sort_values(by=["Date","Symbol"],ascending=[True,True])
- df["Adj_Close"] = df["Adj_Close"].astype(float)
+ df["Close"] = df["Close"].astype(float)
  df["Open"]=df["Open"].astype(float)
  df["Volume"]=df["Volume"].astype(float)
  df["High"]=df["High"].astype(float)
@@ -161,6 +161,7 @@ class Cursor_haunter(object):
         except IndexError:
             # IndexError: index out of bounds
             return self._points[0]
+
 
 class MyFormatter(Formatter):
     # http://matplotlib.org/examples/pylab_examples/date_index_formatter.html
@@ -474,9 +475,9 @@ class Chart_Factory_Portfolio:
   def __init__(self):
       self.portfolio={}
       self.current_indicator=0
-      self.figure_map={"portfolio":False,"weights":False}
+      self.figure_map={"portfolio":False,"weights":False,"risk":False}
 
-  def push_data(self,method,isportfolio=False,isweight=False):
+  def push_data(self,method,isportfolio=False,isweight=False,isrisk=False):
 
       if(isportfolio):
           index,value=method
@@ -488,6 +489,38 @@ class Chart_Factory_Portfolio:
            index,value=method
            self.portfolio[index]=value
            self.figure_map["weights"]=True
+      if(isrisk):
+           self.indicator2+=1
+           index,value=method
+           self.portfolio[index]=value
+           self.figure_map["risk"]=True
+
+  def plot_portfolio_risk(self,ax):
+          ax=ax
+
+          df=self.portfolio["Portfolio's risk distribution: "]
+          print "result", df
+          for i in range(len(df)):
+              x_str_temp="x"+str(i)
+              y_str_temp="y"+str(i)
+              z_str_temp="z"+str(i)
+              # color=np.random.rand(len(df[x_str_temp]))
+              color=["red","green","blue","cyan","orange","grey","purple","darkgreen","gold","forestgreen","lightcyan","violet"]
+              area=np.pi * (60000000* df[z_str_temp].values) ** 2
+              plt.scatter(x=df[x_str_temp].values, y=df[y_str_temp].values, s=area, c=color, edgecolors=None, alpha=0.4)
+              print "current x"
+              print df[x_str_temp].values
+              print "current y"
+              print  df[y_str_temp].values
+
+          tickers=self.portfolio["weights"].index
+          print tickers
+          print tickers
+          plt.xticks(np.arange(len(tickers)), tickers)
+          plt.yticks(np.arange(len(tickers)), tickers)
+
+
+
 
   def plot_portfolio_val(self,ax):
           ax=ax
@@ -547,7 +580,11 @@ class Chart_Factory_Portfolio:
           ax = fig.add_subplot(gs[self.current_indicator])
           self.plot_weights(ax)
 
-
+      if (self.figure_map["risk"]):
+          ff=plt.figure()
+          self.current_indicator += 1
+          ax=plt.subplot()
+          self.plot_portfolio_risk(ax)
 
       plt.show()
 class Stock_Methods:
@@ -662,7 +699,7 @@ class Stock_Info:
         self.all_info["Date"] = self.all_info["Date"].apply(trans)
         self.start = trans(start)
         self.end = trans(end)
-        self.line_info = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Adj_Close"]
+        self.line_info = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Close"]
         self.line_info_volume = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Volume"]
 
     # get information for one year historical data
@@ -681,16 +718,6 @@ class Stock_Info:
         self.annual_avg_return=252*np.mean(self.oney_return)
 
 
-
-
-
-
-
-
-
-
-
-
     #get information for display
         while (self.start not in self.line_info.index):
             self.start += datetime.timedelta(days=1)
@@ -704,9 +731,10 @@ class Stock_Info:
         self.selected_info=self.selected_info[(self.selected_info["Date"]>=self.start)&(self.selected_info["Date"]<=self.end)]
 
 
-        self.candle_info=self.selected_info[["Date","Open","High","Low","Adj_Close"]]
+        self.candle_info=self.selected_info[["Date","Open","High","Low","Close"]]
         self.candle_info["Date"] = self.candle_info["Date"].apply(mdates.date2num)
         self.candle_info=self.candle_info.values.tolist()
+        print self.candle_info
 
 
 
@@ -747,7 +775,6 @@ class Stock_Info:
         description_st3=self.symbol+"'s on balance volume"
         volume_up,volume_down,obv=Stock_Methods.OBV(self)
         return description_st1,volume_up,description_st2,volume_down,description_st3,obv
-
 class Portfolio:
     def __init__(self,connection,tickers,start,end,initial_capital=1000000,weights=[]):
         self.portfolio=pd.DataFrame()
@@ -756,14 +783,22 @@ class Portfolio:
         self.capital=initial_capital
         self.historical=[]
         self.historical_annual_returns=[]
+        self.latest_close=[]
+        self.latest_volume=[]
+        self.latest_high=[]
+        self.latest_low=[]
+        self.latest_daily_return=[]
+        self.latest_open=[]
+        self.adv20=[]
+
         if(len(weights)==0):
          self.weights=np.ones(len(self.tickers))/len(self.tickers)
         else:
           temp=np.asarray(weights).sum()
-          print temp
-          print weights
+          # print temp
+          # print weights
           self.weights=weights/temp
-          print self.weights
+          # print self.weights
         # self.weights=[1,1,1]
         # self.portfolio_value
         for i in range(len(self.tickers)):
@@ -776,27 +811,39 @@ class Portfolio:
             stock_capital_temp=self.capital*self.weights[i]
             stock_share_temp=round(stock_capital_temp/initial_price_temp)
             df_temp=pd.DataFrame([[stock_share_temp,stock_temp.selected_line_info]],columns=["Shares","Price data"],index=[self.tickers[i]])
+            self.latest_close.append(stock_temp.selected_line_info.values[-50:])
+            self.latest_volume.append(stock_temp.selected_line_info_volume.values[-50:])
+            self.latest_open.append(np.asarray(stock_temp.candle_info)[-5:,1])
+            self.latest_high.append(np.asarray(stock_temp.candle_info)[-50:, 2])
+            self.latest_low.append(np.asarray(stock_temp.candle_info)[-50:, 3])
+            self.latest_daily_return.append(stock_temp.oney_return.values[-50:])
             self.portfolio=pd.concat([self.portfolio,df_temp],axis=0)
             print "Portfolio Constructing....("+str(i+1)+"/"+str(len(tickers))+")"
         self.portfolio["Weighted data"]=pd.Series(self.portfolio["Shares"]*self.portfolio["Price data"],index=self.portfolio.index)
+        self.portfolio["Latest close"]=pd.Series(self.latest_close,index=self.portfolio.index)
+        self.portfolio["Latest volume"]=pd.Series(self.latest_volume,index=self.portfolio.index)
+        self.portfolio["Latest open"]=pd.Series(self.latest_open,index=self.portfolio.index)
+        self.portfolio["Latest high"] = pd.Series(self.latest_high, index=self.portfolio.index)
+        self.portfolio["Latest low"] = pd.Series(self.latest_low, index=self.portfolio.index)
+        self.portfolio["Latest daily return"]=pd.Series(self.latest_daily_return,index=self.portfolio.index)
+
+
         self.portfolio_value=self.portfolio["Weighted data"].sum()
 
         print "Portfolio Construction completed! "
         # print "Current Portfolio: ",self.tickers
         #
-        # self.portfolio_sharp_ratio()
+        self.portfolio_sharp_ratio()
     def portfolio_var(self):
         weight_matrix_temp=(np.mat(self.weights).T)*np.mat(self.weights)
         convariance_matrix=np.mat(np.cov(self.historical))
         temp_result=convariance_matrix*weight_matrix_temp
         temp_result=np.diagonal(temp_result)
-        print temp_result
-        print np.sort(temp_result)
+
         self.totalvar=temp_result.sum()
         self.annualized_total_std=np.sqrt(252*self.totalvar)
         print "portfolio annualized standard deviation: ", self.annualized_total_std
         return self.annualized_total_std
-
     def variance_distribution(self):
         weight_matrix_temp = (np.mat(self.weights).T) * np.mat(self.weights)
         convariance_matrix = np.mat(np.cov(self.historical))
@@ -810,22 +857,19 @@ class Portfolio:
             # print temp_result
             for j in range(len(temp_result[0])):
                 df.iat[i, j] = temp_result[0][j]
-        print df
+
 
         weighted_variance = np.mat(df)
         weighted_variance_diag = np.diag(np.diag(weighted_variance))
         weighted_variance = 2 * weighted_variance
         size = weighted_variance - weighted_variance_diag
-        print size
+
 
         # ABOVE IS STEP 2 see document "PROGRAMMING GUIDE"
 
-        main = np.arange(len(convariance_matrix))
-        df1 = pd.DataFrame(main, columns=["x"])
 
-        num = 0
         fig = plt.figure()
-        ax = fig.add_subplot()
+
         df = pd.DataFrame()
 
         for i in range(len(convariance_matrix)):
@@ -844,47 +888,70 @@ class Portfolio:
 
             temp_z = pd.DataFrame(temp_zz, columns=[tem_str3])
             df = pd.concat([df, temp_z], axis=1)
-            area = np.pi * (6000000 * df[tem_str3]) ** 2
-            color = np.random.rand(len(convariance_matrix))
+
             # color=["red","green","blue","cyan","orange","grey","purple","darkgreen","gold","forestgreen","lightcyan","violet"]
-            plt.scatter(x=df[tem_str1], y=df[tem_str2], s=area,c=color,edgecolors=None, alpha=0.4)
-        plt.xticks(np.arange(len(self.tickers)),self.tickers)
-        plt.yticks(np.arange(len(self.tickers)),self.tickers)
 
-        plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        description_str = "Portfolio's risk distribution: "
+        return description_str,df
     def portfolio_sharp_ratio(self):
         self.portfolio_expected_return=self.weights*np.asarray(self.historical_annual_returns)
         self.portfolio_expected_return=self.portfolio_expected_return.sum()
         print "portfolio annualized return: ",self.portfolio_expected_return
         self.sharp_ratio=(self.portfolio_expected_return-0.017)/self.portfolio_var()
         print "Sharp_Ratio: ",self.sharp_ratio
-
-
-
     def portfolio_val(self):
         description_str="Portfolio Value: "
         print type(self.portfolio_value)
         return description_str,self.portfolio_value
-
-
     def portfolio_weights(self):
         description_str="weights"
         temp=pd.Series(self.weights,index=self.tickers)
         return description_str,temp
+#
+class Operator_Methods:
+
+    @staticmethod
+    def core_1(portfolio,benchmark,delay=0):
+
+
+        index=[x for x in portfolio.portfolio.columns if benchmark in x][0]
+        raw_temp=[]
+        for i in range(len(portfolio.portfolio[index].values)):
+            raw_temp.append(portfolio.portfolio[index].values[i][-delay-1])
+        print raw_temp
+        return np.asarray(raw_temp)/abs(np.asarray(raw_temp).sum())
+
+
+class Operator:
+    def __init__(self,portfolio):
+      self.portfolio=portfolio
+    # def portfolio_update(self,weights):
+
+
+
+
+    def close(self,delay=0):
+        return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="close")
+    def open(self,delay=0):
+       return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="open")
+    def high(self,delay=0):
+       return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="high")
+    def low(self,delay=0):
+       return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="low")
+    def returns(self,delay=0):
+       return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="return")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -901,34 +968,47 @@ time_Start=time.time()
 
 
 
+# p1=Portfolio(connection,["AMZN","CSCO","BMY","IBM","HON","AAPL","DIS","GE","HD","JPM","GILD","CVX","CVS","INTC","MMM","MO","T","VZ","UPS"],start,end,weights=[30.0,20.0,10.0,60.0,100.0,10.0,27.0,30.0,40.0,72.0,25,25,47,45,90,67,66,20,54])
+ticker2=["AAPL","AMZN","MSFT"]
+weights2=list(abs(np.random.randn(len(ticker2))))
+# weights2=[-1]
+p1=Portfolio(connection,ticker2,start,end,weights=weights2)
+p2=p1
+pop=Operator(p2)
+print "test",p1.weights
+print "test2",pop.portfolio.weights
+pop.portfolio.weights=[1,1,1]
+print "test3",pop.portfolio.weights
+print "test4",p1.weights
 
-p1=Portfolio(connection,["AMZN","CSCO","BMY","IBM","HON","AAPL","DIS","GE","HD","JPM"],start,end,weights=[30.0,20.0,10.0,60.0,100.0,10.0,27.0,30.0,40.0,72.0])
+
+
 # sample2=Chart_Factory_Portfolio()
 # sample2.push_data(p1.portfolio_val(),isportfolio =True)
 # sample2.push_data(p1.portfolio_weights(),isweight=True)
-
-sns.set_style("whitegrid")
+# sample2.push_data(p1.variance_distribution(),isrisk=True)
+#
+# sns.set_style("whitegrid")
 # sample2.plot_all()
 
-p1.variance_distribution()
-
-
-
-"""
+""""
 
 apple=Stock_Info(connection,"AAPL",start,end)
+
+
+
 
 sample1=Chart_Factory()
 sample1.add_index(apple)
 
 sample1.push_data(apple.price(),isprice=True)
 sample1.push_data(apple.candleprice(),iscandle=True)
-sample1.push_data(apple.ma(20))
+# sample1.push_data(apple.ma(20))
 sample1.push_data(apple.ewma(0.3))
 sample1.push_data(apple.bband(20,1.5))
-sample1.push_data(apple.rsi(14),issubline_rsi=True)
-sample1.push_data(apple.MACD(),issubline_macd=True)
-sample1.push_data(apple.OBV(),issubline_obv=True)
+# sample1.push_data(apple.rsi(14),issubline_rsi=True)
+# sample1.push_data(apple.MACD(),issubline_macd=True)
+# sample1.push_data(apple.OBV(),issubline_obv=True)
 
 sns.set_style("whitegrid")
 time_End=time.time()
@@ -936,8 +1016,8 @@ print "Running time: "+str(time_End-time_Start)+" second(s)."
 # there is basicially no diference between different length of data
 
 sample1.plot_all()
+
+
 """
-
-
 
 
