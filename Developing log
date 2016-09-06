@@ -1,6 +1,11 @@
 Next step:  
 
-strategy execution algorithm  developing  
+strategy execution module  developing  
+
+implemented in the __call___function of the portfolio class. Since the position is adjusted on daily base, the __call__function takes two arguments:  
+1.date--by which we pinpoint the price of a stock and calculated the weighted price thereafter.  
+2. stock weights calculated by strategy algorithms  
+
  
  ---------------------------------------------------------------------------------------------------------------------  
 9-06  
