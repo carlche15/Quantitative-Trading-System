@@ -161,8 +161,6 @@ class Cursor_haunter(object):
         except IndexError:
             # IndexError: index out of bounds
             return self._points[0]
-
-
 class MyFormatter(Formatter):
     # http://matplotlib.org/examples/pylab_examples/date_index_formatter.html
             def __init__(self, dates, fmt='%Y-%m-%d'):
@@ -489,6 +487,7 @@ class Chart_Factory_Portfolio:
            index,value=method
            self.portfolio[index]=value
            self.figure_map["weights"]=True
+
       if(isrisk):
            self.indicator2+=1
            index,value=method
@@ -499,7 +498,6 @@ class Chart_Factory_Portfolio:
           ax=ax
 
           df=self.portfolio["Portfolio's risk distribution: "]
-          print "result", df
           for i in range(len(df)):
               x_str_temp="x"+str(i)
               y_str_temp="y"+str(i)
@@ -508,14 +506,9 @@ class Chart_Factory_Portfolio:
               color=["red","green","blue","cyan","orange","grey","purple","darkgreen","gold","forestgreen","lightcyan","violet"]
               area=np.pi * (60000000* df[z_str_temp].values) ** 2
               plt.scatter(x=df[x_str_temp].values, y=df[y_str_temp].values, s=area, c=color, edgecolors=None, alpha=0.4)
-              print "current x"
-              print df[x_str_temp].values
-              print "current y"
-              print  df[y_str_temp].values
 
           tickers=self.portfolio["weights"].index
-          print tickers
-          print tickers
+
           plt.xticks(np.arange(len(tickers)), tickers)
           plt.yticks(np.arange(len(tickers)), tickers)
 
@@ -700,7 +693,14 @@ class Stock_Info:
         self.start = trans(start)
         self.end = trans(end)
         self.line_info = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Close"]
+
         self.line_info_volume = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Volume"]
+
+        self.line_info_open=self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Open"]
+        self.line_info_high=self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["High"]
+        self.line_info_low = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Low"]
+
+
 
     # get information for one year historical data
 
@@ -710,31 +710,46 @@ class Stock_Info:
 
         while (self.end not in self.line_info.index):
                 self.end -= datetime.timedelta(days=1)
-        self.oney_historical_selected_line_info=self.line_info[start_temp:self.end]
+        self.oney_historical_selected_line_info=self.line_info[start_temp:self.end]# for most recent one year
+        self.selected_line_info_return = self.line_info[self.start:self.end] # for specific time range
 
         diff_temp=np.diff(self.oney_historical_selected_line_info.values)
+        diff_temp2=np.diff(self.selected_line_info_return.values)
         self.oney_historical_selected_line_info=self.oney_historical_selected_line_info[:-1]
+        self.selected_line_info_return=self.selected_line_info_return[:-1]
         self.oney_return=diff_temp/self.oney_historical_selected_line_info
+        self.selected_line_info_return=diff_temp2/self.selected_line_info_return
+
+
         self.annual_avg_return=252*np.mean(self.oney_return)
 
 
     #get information for display
         while (self.start not in self.line_info.index):
             self.start += datetime.timedelta(days=1)
-
-
         self.selected_line_info = self.line_info[self.start:self.end]
-        self.selected_line_info_volume=self.line_info_volume[self.start:self.end]
+        self.selected_line_info_open=self.line_info_open[self.start:self.end]
+        self.selected_line_info_high = self.line_info_high[self.start:self.end]
+        self.selected_line_info_low = self.line_info_low[self.start:self.end]
+        self.selected_line_info_volume = self.line_info_volume[self.start:self.end]
+
+        # self.index is designed for strategy execution
+        # these part could also be achieved by using candle information, but first need dataframe candle information
+        self.index=self.selected_line_info.index[1:]
+        self.selected_line_info=self.selected_line_info[1:]
+        self.selected_line_info_open=self.selected_line_info_open[1:]
+        self.selected_line_info_high=self.selected_line_info_high[1:]
+        self.selected_line_info_low=self.selected_line_info_low[1:]
+
         # below is the data for candlestick~~~~
+
         self.selected_info=self.all_info[self.all_info["Symbol"] == self.symbol]
-
         self.selected_info=self.selected_info[(self.selected_info["Date"]>=self.start)&(self.selected_info["Date"]<=self.end)]
-
-
         self.candle_info=self.selected_info[["Date","Open","High","Low","Close"]]
         self.candle_info["Date"] = self.candle_info["Date"].apply(mdates.date2num)
         self.candle_info=self.candle_info.values.tolist()
-        print self.candle_info
+
+
 
 
 
@@ -781,6 +796,7 @@ class Portfolio:
         self.tickers=tickers
         self.initial_stock_price=[]
         self.capital=initial_capital
+        self.current_total_capital=pd.Series()
         self.historical=[]
         self.historical_annual_returns=[]
         self.latest_close=[]
@@ -795,28 +811,24 @@ class Portfolio:
          self.weights=np.ones(len(self.tickers))/len(self.tickers)
         else:
           temp=np.asarray(weights).sum()
-          # print temp
-          # print weights
           self.weights=weights/temp
-          # print self.weights
-        # self.weights=[1,1,1]
-        # self.portfolio_value
         for i in range(len(self.tickers)):
 
 
             stock_temp=Stock_Info(connection,self.tickers[i],start,end)
+            self.date_index=stock_temp.index
             self.historical.append(stock_temp.oney_return) # order matters
             self.historical_annual_returns.append(stock_temp.annual_avg_return)
             initial_price_temp=stock_temp.selected_line_info.values[0]
             stock_capital_temp=self.capital*self.weights[i]
             stock_share_temp=round(stock_capital_temp/initial_price_temp)
             df_temp=pd.DataFrame([[stock_share_temp,stock_temp.selected_line_info]],columns=["Shares","Price data"],index=[self.tickers[i]])
-            self.latest_close.append(stock_temp.selected_line_info.values[-50:])
-            self.latest_volume.append(stock_temp.selected_line_info_volume.values[-50:])
-            self.latest_open.append(np.asarray(stock_temp.candle_info)[-5:,1])
-            self.latest_high.append(np.asarray(stock_temp.candle_info)[-50:, 2])
-            self.latest_low.append(np.asarray(stock_temp.candle_info)[-50:, 3])
-            self.latest_daily_return.append(stock_temp.oney_return.values[-50:])
+            self.latest_close.append(stock_temp.selected_line_info)
+            self.latest_volume.append(stock_temp.selected_line_info_volume)
+            self.latest_open.append(stock_temp.selected_line_info_open)
+            self.latest_high.append(stock_temp.selected_line_info_high)
+            self.latest_low.append(stock_temp.selected_line_info_low)
+            self.latest_daily_return.append(stock_temp.oney_return)
             self.portfolio=pd.concat([self.portfolio,df_temp],axis=0)
             print "Portfolio Constructing....("+str(i+1)+"/"+str(len(tickers))+")"
         self.portfolio["Weighted data"]=pd.Series(self.portfolio["Shares"]*self.portfolio["Price data"],index=self.portfolio.index)
@@ -828,12 +840,36 @@ class Portfolio:
         self.portfolio["Latest daily return"]=pd.Series(self.latest_daily_return,index=self.portfolio.index)
 
 
+
+
         self.portfolio_value=self.portfolio["Weighted data"].sum()
+
 
         print "Portfolio Construction completed! "
         # print "Current Portfolio: ",self.tickers
         #
         self.portfolio_sharp_ratio()
+    def __call__(self,weights,dates):
+
+        #adjust position
+        new_weights=weights
+        #1.current total capital:
+        current_total=0 # total capital
+        shares_temp=[] #updated shares of stocks
+        for i in range(len(self.tickers)):
+            current_total+=self.portfolio["Shares"].values[i]*pd.Series(self.portfolio["Latest close"][self.tickers[i]])[dates]
+            # print "first",self.weights[i],"second",pd.Series(self.portfolio["Latest close"][self.tickers[i]])[dates]
+        #2. calculate how many shares of each stock:
+        for i in range(len(self.tickers)):
+            share=round((new_weights[i]*current_total)/(pd.Series(self.portfolio["Latest close"][self.tickers[i]])[dates] ))
+            shares_temp.append(share)
+        self.portfolio["Shares"]=shares_temp # update shares information
+        self.portfolio["Weighted data"] = pd.Series(self.portfolio["Shares"] * self.portfolio["Price data"],index=self.portfolio.index) #update weighted price information
+        self.weights=weights # update weight information for next total value computation
+
+        # Show active portfolio managment result!
+        temp_series=pd.Series(current_total,index=[dates])
+        self.current_total_capital=self.current_total_capital.append(temp_series) ## ##
     def portfolio_var(self):
         weight_matrix_temp=(np.mat(self.weights).T)*np.mat(self.weights)
         convariance_matrix=np.mat(np.cov(self.historical))
@@ -901,8 +937,7 @@ class Portfolio:
         print "Sharp_Ratio: ",self.sharp_ratio
     def portfolio_val(self):
         description_str="Portfolio Value: "
-        print type(self.portfolio_value)
-        return description_str,self.portfolio_value
+        return description_str,self.current_total_capital
     def portfolio_weights(self):
         description_str="weights"
         temp=pd.Series(self.weights,index=self.tickers)
@@ -911,53 +946,46 @@ class Portfolio:
 class Operator_Methods:
 
     @staticmethod
-    def core_1(portfolio,benchmark,delay=0):
+    def core_1(portfolio,timemark,benchmark,delay=0):
 
 
-        index=[x for x in portfolio.portfolio.columns if benchmark in x][0]
+        index=[x for x in portfolio.portfolio.columns if benchmark in x][0] # get benchmark name such as "Latest close"
         raw_temp=[]
         for i in range(len(portfolio.portfolio[index].values)):
-            raw_temp.append(portfolio.portfolio[index].values[i][-delay-1])
-        print raw_temp
-        return np.asarray(raw_temp)/abs(np.asarray(raw_temp).sum())
+            raw_temp.append(portfolio.portfolio[index].values[i][timemark])
+        return abs(np.asarray(raw_temp))/abs(np.asarray(raw_temp).sum())
 
 
 class Operator:
     def __init__(self,portfolio):
       self.portfolio=portfolio
-    # def portfolio_update(self,weights):
+      self.index=self.portfolio.date_index
+    def In_sample_test(self):
+
+
+        print "In sample test result: "
+        for date in self.index:
+            weights=Operator_Methods.core_1(self.portfolio, date, "close", 0)
+            self.portfolio(weights,date)
 
 
 
 
     def close(self,delay=0):
+        print Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="close")
         return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="close")
     def open(self,delay=0):
+       print Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="open")
        return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="open")
     def high(self,delay=0):
-       return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="high")
+        print Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="high")
+        return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="high")
     def low(self,delay=0):
-       return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="low")
+        print Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="low")
+        return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="low")
     def returns(self,delay=0):
-       return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="return")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        print Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="return")
+        return Operator_Methods.core_1(self.portfolio,delay=delay,benchmark="return")
 
 
 start = "2015-06-01"
@@ -967,48 +995,42 @@ time_Start=time.time()
 # Main_func
 
 
-
 # p1=Portfolio(connection,["AMZN","CSCO","BMY","IBM","HON","AAPL","DIS","GE","HD","JPM","GILD","CVX","CVS","INTC","MMM","MO","T","VZ","UPS"],start,end,weights=[30.0,20.0,10.0,60.0,100.0,10.0,27.0,30.0,40.0,72.0,25,25,47,45,90,67,66,20,54])
-ticker2=["AAPL","AMZN","MSFT"]
+ticker2=["CSCO","BMY","IBM","HON","AAPL","DIS","GE","HD","JPM","GILD","CVX","CVS","INTC","MMM","MO","T","VZ","UPS"]
 weights2=list(abs(np.random.randn(len(ticker2))))
 # weights2=[-1]
 p1=Portfolio(connection,ticker2,start,end,weights=weights2)
-p2=p1
-pop=Operator(p2)
-print "test",p1.weights
-print "test2",pop.portfolio.weights
-pop.portfolio.weights=[1,1,1]
-print "test3",pop.portfolio.weights
-print "test4",p1.weights
+
+pop=Operator(p1)
+pop.In_sample_test()
+# pop.portfolio_update()
 
 
 
-# sample2=Chart_Factory_Portfolio()
-# sample2.push_data(p1.portfolio_val(),isportfolio =True)
-# sample2.push_data(p1.portfolio_weights(),isweight=True)
-# sample2.push_data(p1.variance_distribution(),isrisk=True)
+
+#
+sample2=Chart_Factory_Portfolio()
+sample2.push_data(p1.portfolio_val(),isportfolio =True)
+sample2.push_data(p1.portfolio_weights(),isweight=True)
+sample2.push_data(p1.variance_distribution(),isrisk=True)
 #
 # sns.set_style("whitegrid")
-# sample2.plot_all()
+sample2.plot_all()
+
 
 """"
-
 apple=Stock_Info(connection,"AAPL",start,end)
-
-
-
-
 sample1=Chart_Factory()
 sample1.add_index(apple)
 
 sample1.push_data(apple.price(),isprice=True)
 sample1.push_data(apple.candleprice(),iscandle=True)
-# sample1.push_data(apple.ma(20))
+sample1.push_data(apple.ma(20))
 sample1.push_data(apple.ewma(0.3))
 sample1.push_data(apple.bband(20,1.5))
-# sample1.push_data(apple.rsi(14),issubline_rsi=True)
-# sample1.push_data(apple.MACD(),issubline_macd=True)
-# sample1.push_data(apple.OBV(),issubline_obv=True)
+sample1.push_data(apple.rsi(14),issubline_rsi=True)
+sample1.push_data(apple.MACD(),issubline_macd=True)
+sample1.push_data(apple.OBV(),issubline_obv=True)
 
 sns.set_style("whitegrid")
 time_End=time.time()
@@ -1016,8 +1038,6 @@ print "Running time: "+str(time_End-time_Start)+" second(s)."
 # there is basicially no diference between different length of data
 
 sample1.plot_all()
-
-
 """
 
 
