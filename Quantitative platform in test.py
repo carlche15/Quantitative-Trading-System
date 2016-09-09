@@ -839,9 +839,6 @@ class Portfolio:
         self.portfolio["Latest low"] = pd.Series(self.latest_low, index=self.portfolio.index)
         self.portfolio["Latest daily return"]=pd.Series(self.latest_daily_return,index=self.portfolio.index)
 
-
-
-
         self.portfolio_value=self.portfolio["Weighted data"].sum()
 
 
@@ -937,7 +934,12 @@ class Portfolio:
         print "Sharp_Ratio: ",self.sharp_ratio
     def portfolio_val(self):
         description_str="Portfolio Value: "
-        return description_str,self.current_total_capital
+        if len(self.current_total_capital)>0:
+          return description_str,self.current_total_capital
+        else:
+          return description_str,self.portfolio_value
+
+
     def portfolio_weights(self):
         description_str="weights"
         temp=pd.Series(self.weights,index=self.tickers)
@@ -1000,9 +1002,9 @@ ticker2=["CSCO","BMY","IBM","HON","AAPL","DIS","GE","HD","JPM","GILD","CVX","CVS
 weights2=list(abs(np.random.randn(len(ticker2))))
 # weights2=[-1]
 p1=Portfolio(connection,ticker2,start,end,weights=weights2)
-
-pop=Operator(p1)
-pop.In_sample_test()
+#
+# pop=Operator(p1)
+# pop.In_sample_test()
 # pop.portfolio_update()
 
 
