@@ -1,5 +1,5 @@
 """
-Stock & Portfolio Data Visualization Tools
+Database manipulation Tools
 author: Tongda (Carl) Che
 email: carlche@bu.edu
 website: http://carlche15.github.com
