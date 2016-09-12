@@ -1,5 +1,5 @@
 """
-Stock & Portfolio Data Visualization Tools
+Snap the position of the cursor and display the pointed value Tools
 author: Tongda (Carl) Che
 email: carlche@bu.edu
 website: http://carlche15.github.com
