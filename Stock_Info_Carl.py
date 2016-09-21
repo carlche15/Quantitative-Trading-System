@@ -1,5 +1,5 @@
 """
-Stock Object and functional tools 
+Stock Class
 author: Tongda (Carl) Che
 email: carlche@bu.edu
 website: http://carlche15.github.com
@@ -18,6 +18,30 @@ def trans(a):
 class Stock_Methods:
 
     @staticmethod
+    # def  stochastic(stock):
+    #     index=stock.selected_line_info.index[14:]
+    #     close=stock.selected_line_info.values[14:]
+    #     lows=stock.selected_line_info_low.values
+    #     highs=stock.selected_line_info_high.values
+    #     L14=[]
+    #     H14=[]
+    #     for i in range(14,len(lows)):
+    #         L14.append(min(lows[i-14:i ]))
+    #         H14.append(max(highs[i-14:i]))
+    #     Kline=100*(close-L14)/(H14-L14)
+    #
+    #
+    #
+    #
+    #     Dline=
+
+
+
+
+
+
+
+
     def ma(stock, window):
         data = stock.selected_line_info.values
         index = stock.selected_line_info.index
@@ -119,6 +143,44 @@ class Stock_Methods:
         volume_data_down=pd.Series(volume_data_down,index=index)
 
         return volume_data_up,volume_data_down,on_balance_volume
+    @staticmethod
+    def VOLUME(stock):
+        price_data = stock.selected_line_info.values  # target 1
+        index = stock.selected_line_info.index
+        volume_data = stock.selected_line_info_volume.values  # target 2
+
+        # For OBV
+        price_delta = np.diff(price_data)
+        price_delta[price_delta >= 0] = 1
+        price_delta[price_delta < 0] = -1
+        obv = []
+        zero_temp = [np.nan]
+        for i in range(len(price_delta)):
+            delta_temp = price_delta[:(i + 1)]
+            volume_temp = volume_data[:i + 1]
+            obv.append(np.dot(delta_temp, volume_temp))
+        obv = np.concatenate((zero_temp, obv))
+        on_balance_volume = pd.Series(obv, index=index)
+
+        # For volume with different colors~~
+        price_delta_temp = np.diff(price_data)
+        price_delta_up, price_delta_down = price_delta_temp.copy(), price_delta.copy()
+        price_delta_up[price_delta_up >= 0] = 1
+        price_delta_up[price_delta_up < 0] = 0
+        price_delta_down[price_delta_down >= 0] = 0
+        price_delta_down[price_delta_down < 0] = 1
+
+        price_delta_up = np.concatenate(([0], price_delta_up))
+        price_delta_down = np.concatenate(([0], price_delta_down))
+
+        volume_data_up = volume_data * price_delta_up
+        volume_data_down = volume_data * price_delta_down
+
+        volume_data_up = pd.Series(volume_data_up, index=index)
+        volume_data_down = pd.Series(volume_data_down, index=index)
+
+        return volume_data_up, volume_data_down, on_balance_volume
+
 class Stock_Info:
 
     def __init__(self, connection, stock_symbol, start, end):
@@ -128,14 +190,10 @@ class Stock_Info:
         self.start = trans(start)
         self.end = trans(end)
         self.line_info = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Close"]
-
         self.line_info_volume = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Volume"]
-
         self.line_info_open=self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Open"]
         self.line_info_high=self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["High"]
         self.line_info_low = self.all_info[self.all_info["Symbol"] == self.symbol].set_index("Date")["Low"]
-
-
 
     # get information for one year historical data
 
@@ -146,16 +204,14 @@ class Stock_Info:
         while (self.end not in self.line_info.index):
                 self.end -= datetime.timedelta(days=1)
         self.oney_historical_selected_line_info=self.line_info[start_temp:self.end]# for most recent one year
-        self.selected_line_info_return = self.line_info[self.start:self.end] # for specific time range
 
+        self.selected_line_info_return = self.line_info[self.start:self.end] # for specific time range
         diff_temp=np.diff(self.oney_historical_selected_line_info.values)
         diff_temp2=np.diff(self.selected_line_info_return.values)
         self.oney_historical_selected_line_info=self.oney_historical_selected_line_info[:-1]
-        self.selected_line_info_return=self.selected_line_info_return[:-1]
+        self.selected_line_info_return=self.selected_line_info_return[1:]
         self.oney_return=diff_temp/self.oney_historical_selected_line_info
         self.selected_line_info_return=diff_temp2/self.selected_line_info_return
-
-
         self.annual_avg_return=252*np.mean(self.oney_return)
 
 
@@ -176,6 +232,7 @@ class Stock_Info:
         self.selected_line_info_high=self.selected_line_info_high[1:]
         self.selected_line_info_low=self.selected_line_info_low[1:]
         self.selected_line_info_volume=self.selected_line_info_volume[1:]
+        # self.selected_line_info_return=self.selected_line_info_return[1:]
 
         # below is the data for candlestick~~~~
 
@@ -185,8 +242,10 @@ class Stock_Info:
         self.candle_info["Date"] = self.candle_info["Date"].apply(mdates.date2num)
         self.candle_info=self.candle_info.values.tolist()
 
-
-
+    def  stochastic(self):
+        description_str=self.symbol+"'s stochastic oscillator "
+        Kline,Dline=Stock_Methods.stochastic(self)
+        return description_str,Kline,Dline
 
 
     def candleprice(self):
@@ -226,3 +285,9 @@ class Stock_Info:
         description_st3=self.symbol+"'s on balance volume"
         volume_up,volume_down,obv=Stock_Methods.OBV(self)
         return description_st1,volume_up,description_st2,volume_down,description_st3,obv
+    def Volume(self):
+        description_st1 = self.symbol + "'s Trading volume(up)"
+        description_st2 = self.symbol + "'s Trading volume(dn)"
+        description_st3 = self.symbol + "'s on balance volume"
+        volume_up, volume_down, obv = Stock_Methods.VOLUME(self)
+        return description_st1, volume_up, description_st2, volume_down, description_st3, obv
