@@ -1,3 +1,11 @@
+"""
+Important Note:
+This integrated script is no longer the latest version.
+For any usage or modification please contact the author:
+Tongda (Carl) Che 
+carlche@bu.edu
+Thanks
+"""
 import pandas as pd
 import numpy as np
 import seaborn as sns
