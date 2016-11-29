@@ -5,7 +5,7 @@ This “Quantitative Analysis platform--Portfolio Go” will hopefully do three 
 4) Strategy testing  
 5) Email at carlche@bu.edu for detailed information and full version of application  
 
-*****INFO BELOW ARE ONLY FOR VERSION 0.9******************
+*****INFO BELOW ARE ONLY FOR VERSION 0.9******************  
     Each part of the function is composed by various modules:  
     0) Data/Date format modify tools.  
     1) Stock chart analysis:  
