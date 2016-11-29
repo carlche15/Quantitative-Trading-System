@@ -1,7 +1,11 @@
-This “Quantitative Analysis platform” will hopefully do three major things:  
-1) Stock chart analysis  
-2) Quantitative trading simulation  
-3) A machine-learning approach to profit/loss simulation of a hedge fund  
+This “Quantitative Analysis platform--Portfolio Go” will hopefully do three major things:  
+1) Stock analysis (capable of stochastic simulation)
+2) Quantitative trading simulation/ Real time live trading (via IB API)  
+3) A machine-learning approach to profit/loss simulation an institution (developing)
+4) Strategy testing  
+5) Email at carlche@bu.edu for detailed information and full version of application  
+
+*****INFO BELOW ARE ONLY FOR VERSION 0.9******************
     Each part of the function is composed by various modules:  
     0) Data/Date format modify tools.  
     1) Stock chart analysis:  
@@ -13,4 +17,5 @@ This “Quantitative Analysis platform” will hopefully do three major things:
         1.3.3 Data visualization tools class(Chart_Factory)  
     2) Quantitative trading simulation:  
      2.1 Portfolio object design(Portfolio).  
-     2.2 Portfolio visualization tool class(Chart_Factory_Portfolio)
+     2.2 Portfolio visualization tool class(Chart_Factory_Portfolio)  
+     
