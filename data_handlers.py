@@ -1,6 +1,6 @@
 import pandas as pd
 import QuantLib as ql
-
+from utilities.function_utilities import *
 
 
 
@@ -91,6 +91,7 @@ class StockHistDataHandler():
     def _to_xarray(tabular_data):
 
         tabular_data.eff_date = pd.to_datetime(tabular_data.eff_date)  # transform date data type
+        tabular_data["return"] = -999
         _data_grouped = tabular_data.groupby(["ticker", "eff_date"]).mean()  # exclude non numerical columns
 
         xarray_data = xr.DataArray(
@@ -117,18 +118,22 @@ class ComputeSuite():
         if data is None:
             return pd.DataFrame()
         else:
-            return pd.DataFrame(data.loc[:,"adj_close_price",:].values).pct_change(axis=1)
+            returns = xarray2df(data,selected_feature="adj_close_price").pct_change(axis=1)
+            data.loc[:,"return",:] = returns.values
+            # returns =  pd.DataFrame(data.loc[:,"adj_close_price",:].values).pct_change(axis=1)
+            # returns.index = data.loc[:, :, :].ticker
+            # returns.columns = np.array(data.loc[:, :, :]["eff_date"])
+            return returns.T
 
     @classmethod
     def close_price(cls,data):
         if data is None:
             return pd.DataFrame()
         else:
-            return pd.DataFrame(data.loc[:, "adj_close_price", :].values)
+            price = xarray2df(data,selected_feature="adj_close_price")
+            return price.TNM
 
 
 # todo: i need to maintain a running xarray for intermediate comptuted values
-
-
 
 
